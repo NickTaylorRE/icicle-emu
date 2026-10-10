@@ -480,7 +480,10 @@ impl<'a, 'b> LifterCtx<'a, 'b> {
 
     fn resolve_export(&mut self, inner: Export) -> Result<Operand> {
         match inner {
-            Export::Value(value) => Ok(self.resolve_value(value)?.into()),
+            // DeVMP spike patch: a re-exported subtable export (`export rel32;` where
+            // rel32 exports `*[ram]:8 reloc`) must stay a pointer so that `goto` of it
+            // branches to the address instead of loading from it.
+            Export::Value(value) => self.resolve_operand(value),
             Export::RamRef(ptr, size) => Ok(Operand::Pointer(self.resolve_value(ptr)?, 0, size)),
             Export::RegisterRef(offset, size) => match self.resolve_value(offset)? {
                 ResolvedValue::Var(_) => Err(Error::InvalidExport(self.subtable.constructor.id)),
